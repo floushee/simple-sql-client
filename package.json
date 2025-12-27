@@ -1,0 +1,25 @@
+{
+  "name": "simple-sql-client",
+  "version": "1.0.0",
+  "description": "A simple SQL client for MS SQL Server and PostgreSQL",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.node.json && tsc",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron ."
+  },
+  "keywords": ["electron", "sql", "database", "postgresql", "mssql"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/mssql": "^9.1.5",
+    "@types/node": "^20.10.6",
+    "@types/pg": "^8.10.9",
+    "electron": "^28.1.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "mssql": "^10.0.2",
+    "pg": "^8.11.3"
+  }
+}
