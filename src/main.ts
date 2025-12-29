@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as mssql from 'mssql';
@@ -39,6 +39,9 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, '../src/index.html'));
+  
+  // Remove menu to clean up the UI
+  Menu.setApplicationMenu(null);
   
   // Open dev tools to debug
   mainWindow.webContents.openDevTools();

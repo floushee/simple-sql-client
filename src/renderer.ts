@@ -8,6 +8,7 @@ const connectionPanel = document.getElementById('connectionPanel') as HTMLDivEle
 const queryPanel = document.getElementById('queryPanel') as HTMLDivElement;
 const connectionForm = document.getElementById('connectionForm') as HTMLFormElement;
 const savedConnectionsDiv = document.getElementById('savedConnections') as HTMLDivElement;
+const resultsSection = document.getElementById('resultsSection') as HTMLDivElement;
 const testBtn = document.getElementById('testBtn') as HTMLButtonElement;
 const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
 const disconnectBtn = document.getElementById('disconnectBtn') as HTMLButtonElement;
@@ -21,6 +22,7 @@ const queryHighlight = document.getElementById('queryHighlight') as HTMLElement;
 const resultsInfo = document.getElementById('resultsInfo') as HTMLDivElement;
 const resultsTableHead = document.getElementById('resultsTableHead') as HTMLTableSectionElement;
 const resultsTableBody = document.getElementById('resultsTableBody') as HTMLTableSectionElement;
+const themeToggleBtn = document.getElementById('themeToggleBtn') as HTMLButtonElement;
 
 // Form inputs
 const connectionNameInput = document.getElementById('connectionName') as HTMLInputElement;
@@ -31,7 +33,8 @@ const databaseInput = document.getElementById('database') as HTMLInputElement;
 const usernameInput = document.getElementById('username') as HTMLInputElement;
 const passwordInput = document.getElementById('password') as HTMLInputElement;
 
-// Initialize
+// Initialize theme
+initializeTheme();
 loadSavedConnections();
 updateQueryHighlight();
 
@@ -42,6 +45,11 @@ queryInput.addEventListener('input', () => {
 
 queryInput.addEventListener('scroll', () => {
   syncScrollPosition();
+});
+
+// Theme toggle handler
+themeToggleBtn.addEventListener('click', () => {
+  toggleTheme();
 });
 
 // Set default port based on database type
@@ -243,11 +251,10 @@ executeBtn.addEventListener('click', async () => {
     if (result.success) {
       if (result.data && result.data.rows && result.data.rows.length > 0) {
         displayResults(result.data);
-        showStatus(queryStatus, `Query executed successfully. ${result.data.rowCount} row(s) returned.`);
       } else if (result.message) {
         showStatus(queryStatus, result.message);
       } else {
-        showStatus(queryStatus, 'Query executed successfully. No results to display.');
+        // Silent success when no results
       }
     } else {
       showStatus(queryStatus, `Query failed: ${result.error}`, true);
@@ -274,8 +281,8 @@ function displayResults(data: { columns: string[]; rows: any[]; rowCount: number
   resultsTableHead.innerHTML = '';
   resultsTableBody.innerHTML = '';
 
-  // Show info
-  resultsInfo.textContent = `${data.rowCount} row(s) returned`;
+  // Show results section
+  resultsSection.style.display = 'block';
 
   // Create header
   const headerRow = document.createElement('tr');
@@ -304,6 +311,7 @@ function clearResults() {
   resultsTableHead.innerHTML = '';
   resultsTableBody.innerHTML = '';
   resultsInfo.textContent = '';
+  resultsSection.style.display = 'none';
 }
 
 function updateQueryHighlight() {
@@ -376,4 +384,27 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// Theme management
+function initializeTheme() {
+  const savedTheme = (localStorage.getItem('theme') || 'dark') as 'light' | 'dark';
+  setTheme(savedTheme);
+}
+
+function setTheme(theme: 'light' | 'dark') {
+  const htmlElement = document.documentElement;
+  if (theme === 'dark') {
+    htmlElement.setAttribute('data-theme', 'dark');
+  } else {
+    htmlElement.removeAttribute('data-theme');
+  }
+  localStorage.setItem('theme', theme);
+}
+
+function toggleTheme() {
+  const htmlElement = document.documentElement;
+  const currentTheme = htmlElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  setTheme(newTheme as 'light' | 'dark');
 }
