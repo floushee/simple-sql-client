@@ -19,7 +19,6 @@ const queryStatus = document.getElementById('queryStatus') as HTMLDivElement;
 const connectedDbName = document.getElementById('connectedDbName') as HTMLHeadingElement;
 const queryInput = document.getElementById('queryInput') as HTMLTextAreaElement;
 const queryHighlight = document.getElementById('queryHighlight') as HTMLElement;
-const resultsInfo = document.getElementById('resultsInfo') as HTMLDivElement;
 const resultsTableHead = document.getElementById('resultsTableHead') as HTMLTableSectionElement;
 const resultsTableBody = document.getElementById('resultsTableBody') as HTMLTableSectionElement;
 const themeToggleBtn = document.getElementById('themeToggleBtn') as HTMLButtonElement;
@@ -352,7 +351,6 @@ function displayResults(data: { columns: string[]; rows: any[]; rowCount: number
 function clearResults() {
   resultsTableHead.innerHTML = '';
   resultsTableBody.innerHTML = '';
-  resultsInfo.textContent = '';
   resultsSection.style.display = 'none';
 }
 
