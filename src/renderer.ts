@@ -1,4 +1,4 @@
-import type { ConnectionConfig } from './types';
+import type { ConnectionConfig, SchemaInfo } from './types';
 
 let currentConnection: ConnectionConfig | null = null;
 let currentConnectionId: string | null = null;
@@ -23,6 +23,10 @@ const resultsInfo = document.getElementById('resultsInfo') as HTMLDivElement;
 const resultsTableHead = document.getElementById('resultsTableHead') as HTMLTableSectionElement;
 const resultsTableBody = document.getElementById('resultsTableBody') as HTMLTableSectionElement;
 const themeToggleBtn = document.getElementById('themeToggleBtn') as HTMLButtonElement;
+const toggleSchemaBtn = document.getElementById('toggleSchemaBtn') as HTMLButtonElement | null;
+const schemaPanel = document.getElementById('schemaPanel') as HTMLDivElement | null;
+const queryLayout = document.getElementById('queryLayout') as HTMLDivElement | null;
+const schemaTree = document.getElementById('schemaTree') as HTMLDivElement | null;
 
 // Form inputs
 const connectionNameInput = document.getElementById('connectionName') as HTMLInputElement;
@@ -51,6 +55,37 @@ queryInput.addEventListener('scroll', () => {
 themeToggleBtn.addEventListener('click', () => {
   toggleTheme();
 });
+
+// Schema panel toggle
+if (toggleSchemaBtn) {
+  toggleSchemaBtn.addEventListener('click', async () => {
+    if (!currentConnection) {
+      showStatus(queryStatus, 'Not connected to a database', true);
+      return;
+    }
+    if (!schemaPanel || !schemaTree || !queryLayout) return;
+
+    const hasSchema = queryLayout.classList.contains('has-schema');
+    if (!hasSchema) {
+      queryLayout.classList.add('has-schema');
+      schemaPanel.style.display = 'block';
+      schemaTree.innerHTML = '<p class="empty-state">Loading schemas…</p>';
+      try {
+        const result = await window.electronAPI.getSchemaTree(currentConnection);
+        if (result.success && result.data) {
+          renderSchemaTree(result.data);
+        } else {
+          schemaTree.innerHTML = `<p class="empty-state">Failed to load: ${result.error || 'Unknown error'}</p>`;
+        }
+      } catch (err) {
+        schemaTree.innerHTML = `<p class="empty-state">Error: ${String(err)}</p>`;
+      }
+    } else {
+      queryLayout.classList.remove('has-schema');
+      schemaPanel.style.display = 'none';
+    }
+  });
+}
 
 // Set default port based on database type
 dbTypeInput.addEventListener('change', () => {
@@ -216,6 +251,13 @@ disconnectBtn.addEventListener('click', () => {
   queryPanel.style.display = 'none';
   connectionPanel.style.display = 'block';
   clearResults();
+  if (schemaPanel) {
+    schemaPanel.style.display = 'none';
+    if (schemaTree) schemaTree.innerHTML = '';
+  }
+  if (queryLayout) {
+    queryLayout.classList.remove('has-schema');
+  }
 });
 
 // Execute query
@@ -312,6 +354,41 @@ function clearResults() {
   resultsTableBody.innerHTML = '';
   resultsInfo.textContent = '';
   resultsSection.style.display = 'none';
+}
+
+function renderSchemaTree(schemas: SchemaInfo[]) {
+  if (!schemaTree) return;
+  const container = document.createElement('div');
+  schemas.forEach((schema) => {
+    const schemaDetails = document.createElement('details');
+    schemaDetails.open = false;
+    const schemaSummary = document.createElement('summary');
+    schemaSummary.textContent = schema.name;
+    schemaDetails.appendChild(schemaSummary);
+
+    const tablesList = document.createElement('div');
+    schema.tables.forEach((table) => {
+      const tableDetails = document.createElement('details');
+      tableDetails.open = false;
+      const tableSummary = document.createElement('summary');
+      tableSummary.textContent = table.name;
+      tableDetails.appendChild(tableSummary);
+
+      const colsList = document.createElement('ul');
+      table.columns.forEach((col) => {
+        const li = document.createElement('li');
+        li.textContent = col.dataType ? `${col.name} (${col.dataType})` : col.name;
+        colsList.appendChild(li);
+      });
+      tableDetails.appendChild(colsList);
+      tablesList.appendChild(tableDetails);
+    });
+
+    schemaDetails.appendChild(tablesList);
+    container.appendChild(schemaDetails);
+  });
+  schemaTree.innerHTML = '';
+  schemaTree.appendChild(container);
 }
 
 function updateQueryHighlight() {

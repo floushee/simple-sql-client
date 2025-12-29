@@ -9,6 +9,7 @@ A lightweight Electron-based SQL client for Microsoft SQL Server and PostgreSQL.
 - Test connections before connecting
 - Execute SQL queries (supports executing selected text or entire query)
 - View query results in a clean table format
+- Toggle a collapsible schema tree (schemas → tables → columns)
 - Minimal dependencies - pure vanilla JavaScript/TypeScript
 
 ## Installation
@@ -54,6 +55,11 @@ npm run build
    - Click "Execute Query" to run all queries
    - Select specific text to execute only the selected portion
    - Results appear in a table below
+
+4. **Browse Schemas**
+   - Click the "Schemas" button in the query header
+   - A collapsible tree of schemas, tables, and columns is shown
+   - Click items to expand/collapse; click "Schemas" again to hide
 
 ## Database Support
 

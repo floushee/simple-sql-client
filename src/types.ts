@@ -9,6 +9,21 @@ export interface ConnectionConfig {
   password: string;
 }
 
+export interface ColumnInfo {
+  name: string;
+  dataType?: string;
+}
+
+export interface TableInfo {
+  name: string;
+  columns: ColumnInfo[];
+}
+
+export interface SchemaInfo {
+  name: string;
+  tables: TableInfo[];
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -20,6 +35,11 @@ declare global {
         success: boolean;
         data?: { columns: string[]; rows: any[]; rowCount: number };
         message?: string;
+        error?: string;
+      }>;
+      getSchemaTree: (config: ConnectionConfig) => Promise<{
+        success: boolean;
+        data?: SchemaInfo[];
         error?: string;
       }>;
     };

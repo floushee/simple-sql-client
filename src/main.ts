@@ -27,6 +27,21 @@ interface QueryResult {
   rowCount: number;
 }
 
+interface ColumnInfo {
+  name: string;
+  dataType?: string;
+}
+
+interface TableInfo {
+  name: string;
+  columns: ColumnInfo[];
+}
+
+interface SchemaInfo {
+  name: string;
+  tables: TableInfo[];
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -227,6 +242,120 @@ ipcMain.handle('execute-query', async (event, config: ConnectionConfig, query: s
           message: `Query executed successfully. ${result.rowCount || 0} row(s) affected.`
         };
       }
+    }
+    return { success: false, error: 'Unsupported database type' };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+// Get schema tree
+ipcMain.handle('get-schema-tree', async (event, config: ConnectionConfig) => {
+  try {
+    if (config.type === 'mssql') {
+      const pool = await mssql.connect({
+        server: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.username,
+        password: config.password,
+        options: {
+          encrypt: false,
+          trustServerCertificate: true
+        }
+      });
+
+      const schemasResult = await pool.request().query(
+        `SELECT DISTINCT TABLE_SCHEMA AS schema_name
+         FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_TYPE = 'BASE TABLE'
+         ORDER BY TABLE_SCHEMA`
+      );
+
+      const schemas: SchemaInfo[] = [];
+      for (const row of schemasResult.recordset) {
+        const schemaName: string = row.schema_name;
+        const tablesResult = await pool.request()
+          .input('schema', mssql.NVarChar, schemaName)
+          .query(
+            `SELECT TABLE_NAME AS table_name
+             FROM INFORMATION_SCHEMA.TABLES
+             WHERE TABLE_SCHEMA = @schema AND TABLE_TYPE = 'BASE TABLE'
+             ORDER BY TABLE_NAME`
+          );
+
+        const tables: TableInfo[] = [];
+        for (const t of tablesResult.recordset) {
+          const tableName: string = t.table_name;
+          const colsResult = await pool.request()
+            .input('schema', mssql.NVarChar, schemaName)
+            .input('table', mssql.NVarChar, tableName)
+            .query(
+              `SELECT COLUMN_NAME AS column_name, DATA_TYPE AS data_type
+               FROM INFORMATION_SCHEMA.COLUMNS
+               WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table
+               ORDER BY ORDINAL_POSITION`
+            );
+          const columns: ColumnInfo[] = colsResult.recordset.map((c: any) => ({
+            name: c.column_name,
+            dataType: c.data_type
+          }));
+          tables.push({ name: tableName, columns });
+        }
+        schemas.push({ name: schemaName, tables });
+      }
+
+      await pool.close();
+      return { success: true, data: schemas };
+    } else if (config.type === 'postgresql') {
+      const client = new PgClient({
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.username,
+        password: config.password
+      });
+      await client.connect();
+
+      const schemasResult = await client.query(
+        `SELECT DISTINCT table_schema AS schema_name
+         FROM information_schema.tables
+         WHERE table_type = 'BASE TABLE'
+         ORDER BY table_schema`
+      );
+
+      const schemas: SchemaInfo[] = [];
+      for (const row of schemasResult.rows) {
+        const schemaName: string = row.schema_name;
+        const tablesResult = await client.query(
+          `SELECT table_name
+           FROM information_schema.tables
+           WHERE table_schema = $1 AND table_type = 'BASE TABLE'
+           ORDER BY table_name`,
+          [schemaName]
+        );
+
+        const tables: TableInfo[] = [];
+        for (const t of tablesResult.rows) {
+          const tableName: string = t.table_name;
+          const colsResult = await client.query(
+            `SELECT column_name, data_type
+             FROM information_schema.columns
+             WHERE table_schema = $1 AND table_name = $2
+             ORDER BY ordinal_position`,
+            [schemaName, tableName]
+          );
+          const columns: ColumnInfo[] = colsResult.rows.map((c: any) => ({
+            name: c.column_name,
+            dataType: c.data_type
+          }));
+          tables.push({ name: tableName, columns });
+        }
+        schemas.push({ name: schemaName, tables });
+      }
+
+      await client.end();
+      return { success: true, data: schemas };
     }
     return { success: false, error: 'Unsupported database type' };
   } catch (error) {

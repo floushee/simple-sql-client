@@ -286,6 +286,21 @@ select {
   padding: 0;
 }
 
+.query-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.query-layout.has-schema {
+  grid-template-columns: 1fr 340px;
+}
+
+.query-left {
+  min-width: 0;
+}
+
 .query-header {
   display: flex;
   justify-content: space-between;
@@ -352,6 +367,48 @@ select {
 
 .sql-highlighter code {
   display: block;
+}
+
+/* Schema Panel */
+.schema-panel {
+  margin-bottom: 0;
+}
+
+.schema-tree {
+  max-height: 540px;
+  overflow: auto;
+  padding: 14px;
+}
+
+.schema-tree details {
+  margin: 4px 0;
+}
+
+.schema-tree summary {
+  cursor: pointer;
+  padding: 6px 6px;
+  border-radius: 8px;
+  color: var(--text);
+}
+
+.schema-tree summary:hover {
+  background: var(--surface-hover);
+}
+
+.schema-tree ul {
+  list-style: none;
+  margin: 6px 0 6px 12px;
+  padding: 0;
+}
+
+.schema-tree li {
+  padding: 4px 6px;
+  color: var(--muted);
+  border-radius: 6px;
+}
+
+.schema-tree li:hover {
+  background: var(--surface-hover);
 }
 
 .sql-keyword {
@@ -464,6 +521,13 @@ select {
 @media (max-width: 900px) {
   .connection-shell {
     grid-template-columns: 1fr;
+  }
+  .query-layout,
+  .query-layout.has-schema {
+    grid-template-columns: 1fr;
+  }
+  #schemaPanel {
+    order: 2;
   }
 }
 

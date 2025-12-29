@@ -101,33 +101,49 @@
           <div class="query-title">
             <h2 id="connectedDbName">Connected to: </h2>
           </div>
-          <button id="disconnectBtn" class="btn btn-secondary">Disconnect</button>
+          <div class="query-actions">
+            <button id="toggleSchemaBtn" class="btn btn-secondary" title="Toggle schema tree">Schemas</button>
+            <button id="disconnectBtn" class="btn btn-secondary">Disconnect</button>
+          </div>
         </div>
 
-        <div class="section">
-          <h3>SQL Query</h3>
-          <div class="sql-editor">
-            <pre aria-hidden="true" class="sql-highlighter"><code id="queryHighlight"></code></pre>
-            <textarea id="queryInput" placeholder="Enter your SQL query here...&#10;&#10;Tip: Select text to execute only the selected query, otherwise all queries will be executed."></textarea>
-          </div>
-          <div class="button-group">
-            <button id="executeBtn" class="btn btn-primary">Execute Query</button>
-            <button id="clearQueryBtn" class="btn btn-secondary">Clear</button>
-          </div>
-          <div id="queryStatus" class="status-message"></div>
-        </div>
+        <div id="queryLayout" class="query-layout">
+          <div class="query-left">
+            <div class="section">
+              <h3>SQL Query</h3>
+              <div class="sql-editor">
+                <pre aria-hidden="true" class="sql-highlighter"><code id="queryHighlight"></code></pre>
+                <textarea id="queryInput" placeholder="Enter your SQL query here...&#10;&#10;Tip: Select text to execute only the selected query, otherwise all queries will be executed."></textarea>
+              </div>
+              <div class="button-group">
+                <button id="executeBtn" class="btn btn-primary">Execute Query</button>
+                <button id="clearQueryBtn" class="btn btn-secondary">Clear</button>
+              </div>
+              <div id="queryStatus" class="status-message"></div>
+            </div>
 
-        <div class="section" id="resultsSection" style="display: none;">
-          <h3>Results</h3>
-          <div id="resultsContainer">
-            <div id="resultsInfo" class="results-info"></div>
-            <div id="resultsTableContainer" class="table-container">
-              <table id="resultsTable">
-                <thead id="resultsTableHead"></thead>
-                <tbody id="resultsTableBody"></tbody>
-              </table>
+            <div class="section" id="resultsSection" style="display: none;">
+              <h3>Results</h3>
+              <div id="resultsContainer">
+                <div id="resultsInfo" class="results-info"></div>
+                <div id="resultsTableContainer" class="table-container">
+                  <table id="resultsTable">
+                    <thead id="resultsTableHead"></thead>
+                    <tbody id="resultsTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
+
+          <aside id="schemaPanel" class="schema-panel" style="display: none;">
+            <div class="section">
+              <h3>Schemas</h3>
+              <div class="sql-editor">
+                <div id="schemaTree" class="schema-tree"></div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
