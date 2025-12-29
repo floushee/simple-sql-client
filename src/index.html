@@ -78,7 +78,10 @@
 
       <div class="section">
         <h3>SQL Query</h3>
-        <textarea id="queryInput" placeholder="Enter your SQL query here...&#10;&#10;Tip: Select text to execute only the selected query, otherwise all queries will be executed."></textarea>
+        <div class="sql-editor">
+          <pre aria-hidden="true" class="sql-highlighter"><code id="queryHighlight"></code></pre>
+          <textarea id="queryInput" placeholder="Enter your SQL query here...&#10;&#10;Tip: Select text to execute only the selected query, otherwise all queries will be executed."></textarea>
+        </div>
         <div class="button-group">
           <button id="executeBtn" class="btn btn-primary">Execute Query</button>
           <button id="clearQueryBtn" class="btn btn-secondary">Clear</button>

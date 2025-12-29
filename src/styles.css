@@ -222,11 +222,68 @@ select {
   font-size: 14px;
   resize: vertical;
   transition: border-color 0.3s ease;
+  background: transparent;
+  color: transparent;
+  caret-color: #333;
+  position: relative;
+  z-index: 2;
+}
+
+#queryInput::placeholder {
+  color: #8b8b8b;
+  opacity: 1;
 }
 
 #queryInput:focus {
   outline: none;
   border-color: #667eea;
+}
+
+.sql-editor {
+  position: relative;
+}
+
+.sql-highlighter {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 15px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  background: white;
+  color: #111;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  z-index: 1;
+}
+
+.sql-highlighter code {
+  display: block;
+}
+
+.sql-keyword {
+  color: #5b21b6;
+  font-weight: 700;
+}
+
+.sql-builtin {
+  color: #2563eb;
+}
+
+.sql-string {
+  color: #b45309;
+}
+
+.sql-number {
+  color: #047857;
+}
+
+.sql-comment {
+  color: #6b7280;
 }
 
 /* Results Table */

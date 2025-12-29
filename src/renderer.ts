@@ -17,6 +17,7 @@ const connectionStatus = document.getElementById('connectionStatus') as HTMLDivE
 const queryStatus = document.getElementById('queryStatus') as HTMLDivElement;
 const connectedDbName = document.getElementById('connectedDbName') as HTMLHeadingElement;
 const queryInput = document.getElementById('queryInput') as HTMLTextAreaElement;
+const queryHighlight = document.getElementById('queryHighlight') as HTMLElement;
 const resultsInfo = document.getElementById('resultsInfo') as HTMLDivElement;
 const resultsTableHead = document.getElementById('resultsTableHead') as HTMLTableSectionElement;
 const resultsTableBody = document.getElementById('resultsTableBody') as HTMLTableSectionElement;
@@ -32,6 +33,16 @@ const passwordInput = document.getElementById('password') as HTMLInputElement;
 
 // Initialize
 loadSavedConnections();
+updateQueryHighlight();
+
+queryInput.addEventListener('input', () => {
+  updateQueryHighlight();
+  syncScrollPosition();
+});
+
+queryInput.addEventListener('scroll', () => {
+  syncScrollPosition();
+});
 
 // Set default port based on database type
 dbTypeInput.addEventListener('change', () => {
@@ -252,6 +263,7 @@ executeBtn.addEventListener('click', async () => {
 // Clear query
 clearQueryBtn.addEventListener('click', () => {
   queryInput.value = '';
+  updateQueryHighlight();
   clearResults();
   queryStatus.className = 'status-message';
 });
@@ -292,4 +304,76 @@ function clearResults() {
   resultsTableHead.innerHTML = '';
   resultsTableBody.innerHTML = '';
   resultsInfo.textContent = '';
+}
+
+function updateQueryHighlight() {
+  if (!queryHighlight) return;
+  queryHighlight.innerHTML = highlightSql(queryInput.value);
+}
+
+function syncScrollPosition() {
+  if (!queryHighlight) return;
+  const highlighter = queryHighlight.parentElement;
+  if (!highlighter) return;
+  highlighter.scrollTop = queryInput.scrollTop;
+  highlighter.scrollLeft = queryInput.scrollLeft;
+}
+
+function highlightSql(sql: string): string {
+  const keywords = new Set([
+    'SELECT', 'FROM', 'WHERE', 'GROUP', 'BY', 'ORDER', 'HAVING', 'INSERT', 'INTO', 'VALUES',
+    'UPDATE', 'SET', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TABLE', 'VIEW', 'INDEX', 'JOIN',
+    'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'AS', 'DISTINCT', 'UNION', 'ALL', 'LIMIT',
+    'OFFSET', 'TOP', 'AND', 'OR', 'NOT', 'NULL', 'IS', 'IN', 'EXISTS', 'LIKE', 'CASE',
+    'WHEN', 'THEN', 'ELSE', 'END', 'RETURNING'
+  ]);
+
+  const builtins = new Set([
+    'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'NOW', 'COALESCE', 'CAST', 'CONVERT', 'ROW_NUMBER'
+  ]);
+
+  const tokens: string[] = [];
+  let lastIndex = 0;
+  const regex = /(--.*?$|\/\*[\s\S]*?\*\/|'(?:''|[^'])*'|"[^"]*"|\b\d+(?:\.\d+)?\b|\b[a-z_][\w]*\b)/gim;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(sql)) !== null) {
+    const matchText = match[0];
+    tokens.push(escapeHtml(sql.slice(lastIndex, match.index)));
+
+    const upper = matchText.toUpperCase();
+    let cls = '';
+
+    if (matchText.startsWith('--') || matchText.startsWith('/*')) {
+      cls = 'comment';
+    } else if (matchText.startsWith("'") || matchText.startsWith('"')) {
+      cls = 'string';
+    } else if (/^\d/.test(matchText)) {
+      cls = 'number';
+    } else if (keywords.has(upper)) {
+      cls = 'keyword';
+    } else if (builtins.has(upper)) {
+      cls = 'builtin';
+    }
+
+    if (cls) {
+      tokens.push(`<span class="sql-${cls}">${escapeHtml(matchText)}</span>`);
+    } else {
+      tokens.push(escapeHtml(matchText));
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  tokens.push(escapeHtml(sql.slice(lastIndex)));
+  return tokens.join('');
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
