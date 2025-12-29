@@ -123,13 +123,26 @@
             </div>
 
             <div class="section" id="resultsSection" style="display: none;">
-              <h3>Results</h3>
+              <div class="results-header">
+                <h3>Results</h3>
+                <div id="resultViewToggle" class="segmented" role="tablist" aria-label="Result view">
+                  <button id="viewTableBtn" class="segmented-btn active" aria-selected="true" title="Show as table">Table</button>
+                  <button id="viewJsonBtn" class="segmented-btn" aria-selected="false" title="Show as JSON">JSON</button>
+                  <button id="viewCsvBtn" class="segmented-btn" aria-selected="false" title="Show as CSV">CSV</button>
+                </div>
+              </div>
               <div id="resultsContainer">
                 <div id="resultsTableContainer" class="table-container">
                   <table id="resultsTable">
                     <thead id="resultsTableHead"></thead>
                     <tbody id="resultsTableBody"></tbody>
                   </table>
+                </div>
+                <div id="resultsJsonContainer" class="code-container" style="display: none;">
+                  <pre id="resultsJsonPre" class="code-block" aria-label="JSON results"></pre>
+                </div>
+                <div id="resultsCsvContainer" class="code-container" style="display: none;">
+                  <pre id="resultsCsvPre" class="code-block" aria-label="CSV results"></pre>
                 </div>
               </div>
             </div>

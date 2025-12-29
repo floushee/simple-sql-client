@@ -517,6 +517,61 @@ select {
   height: 20px;
 }
 
+/* Results header */
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Segmented control */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.segmented-btn {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.segmented-btn + .segmented-btn {
+  border-left: 1px solid var(--border);
+}
+
+.segmented-btn.active {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+/* Code containers for JSON/CSV */
+.code-container {
+  overflow: auto;
+  max-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.code-block {
+  margin: 0;
+  padding: 12px 14px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: pre;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .connection-shell {

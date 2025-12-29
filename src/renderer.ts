@@ -21,6 +21,14 @@ const queryInput = document.getElementById('queryInput') as HTMLTextAreaElement;
 const queryHighlight = document.getElementById('queryHighlight') as HTMLElement;
 const resultsTableHead = document.getElementById('resultsTableHead') as HTMLTableSectionElement;
 const resultsTableBody = document.getElementById('resultsTableBody') as HTMLTableSectionElement;
+const viewTableBtn = document.getElementById('viewTableBtn') as HTMLButtonElement | null;
+const viewJsonBtn = document.getElementById('viewJsonBtn') as HTMLButtonElement | null;
+const viewCsvBtn = document.getElementById('viewCsvBtn') as HTMLButtonElement | null;
+const resultsTableContainer = document.getElementById('resultsTableContainer') as HTMLDivElement | null;
+const resultsJsonContainer = document.getElementById('resultsJsonContainer') as HTMLDivElement | null;
+const resultsCsvContainer = document.getElementById('resultsCsvContainer') as HTMLDivElement | null;
+const resultsJsonPre = document.getElementById('resultsJsonPre') as HTMLPreElement | null;
+const resultsCsvPre = document.getElementById('resultsCsvPre') as HTMLPreElement | null;
 const themeToggleBtn = document.getElementById('themeToggleBtn') as HTMLButtonElement;
 const toggleSchemaBtn = document.getElementById('toggleSchemaBtn') as HTMLButtonElement | null;
 const schemaPanel = document.getElementById('schemaPanel') as HTMLDivElement | null;
@@ -40,6 +48,17 @@ const passwordInput = document.getElementById('password') as HTMLInputElement;
 initializeTheme();
 loadSavedConnections();
 updateQueryHighlight();
+
+let resultViewMode: 'table' | 'json' | 'csv' = 'table';
+let lastQueryResult: { columns: string[]; rows: any[]; rowCount: number } | null = null;
+
+// Initialize result view mode from localStorage
+const savedResultView = (localStorage.getItem('resultViewMode') as 'table' | 'json' | 'csv' | null);
+if (savedResultView) {
+  setResultViewMode(savedResultView);
+} else {
+  setResultViewMode('table');
+}
 
 queryInput.addEventListener('input', () => {
   updateQueryHighlight();
@@ -84,6 +103,13 @@ if (toggleSchemaBtn) {
       schemaPanel.style.display = 'none';
     }
   });
+}
+
+// Result view toggle
+if (viewTableBtn && viewJsonBtn && viewCsvBtn) {
+  viewTableBtn.addEventListener('click', () => setResultViewMode('table'));
+  viewJsonBtn.addEventListener('click', () => setResultViewMode('json'));
+  viewCsvBtn.addEventListener('click', () => setResultViewMode('csv'));
 }
 
 // Set default port based on database type
@@ -289,14 +315,14 @@ executeBtn.addEventListener('click', async () => {
   try {
     const result = await window.electronAPI.executeQuery(currentConnection, query);
     
-    if (result.success) {
-      if (result.data && result.data.rows && result.data.rows.length > 0) {
-        displayResults(result.data);
-      } else if (result.message) {
+      if (result.success) {
+        if (result.data && result.data.rows && result.data.rows.length > 0) {
+          displayResults(result.data);
+        } else if (result.message) {
         showStatus(queryStatus, result.message);
-      } else {
+        } else {
         // Silent success when no results
-      }
+        }
     } else {
       showStatus(queryStatus, `Query failed: ${result.error}`, true);
     }
@@ -316,42 +342,68 @@ clearQueryBtn.addEventListener('click', () => {
   queryStatus.className = 'status-message';
 });
 
-// Display results in table
+// Display results in selected view
 function displayResults(data: { columns: string[]; rows: any[]; rowCount: number }) {
-  // Clear existing results
-  resultsTableHead.innerHTML = '';
-  resultsTableBody.innerHTML = '';
-
-  // Show results section
+  lastQueryResult = data;
   resultsSection.style.display = 'block';
 
-  // Create header
-  const headerRow = document.createElement('tr');
-  data.columns.forEach(col => {
-    const th = document.createElement('th');
-    th.textContent = col;
-    headerRow.appendChild(th);
-  });
-  resultsTableHead.appendChild(headerRow);
+  if (resultViewMode === 'table') {
+    // Clear and render table
+    if (resultsTableHead && resultsTableBody && resultsTableContainer) {
+      resultsTableHead.innerHTML = '';
+      resultsTableBody.innerHTML = '';
 
-  // Create rows
-  data.rows.forEach(row => {
-    const tr = document.createElement('tr');
-    data.columns.forEach(col => {
-      const td = document.createElement('td');
-      const value = row[col];
-      td.textContent = value !== null && value !== undefined ? String(value) : 'NULL';
-      tr.appendChild(td);
-    });
-    resultsTableBody.appendChild(tr);
-  });
+      const headerRow = document.createElement('tr');
+      data.columns.forEach(col => {
+        const th = document.createElement('th');
+        th.textContent = col;
+        headerRow.appendChild(th);
+      });
+      resultsTableHead.appendChild(headerRow);
+
+      data.rows.forEach(row => {
+        const tr = document.createElement('tr');
+        data.columns.forEach(col => {
+          const td = document.createElement('td');
+          const value = row[col];
+          td.textContent = value !== null && value !== undefined ? String(value) : 'NULL';
+          tr.appendChild(td);
+        });
+        resultsTableBody.appendChild(tr);
+      });
+
+      resultsTableContainer.style.display = 'block';
+    }
+    if (resultsJsonContainer) resultsJsonContainer.style.display = 'none';
+    if (resultsCsvContainer) resultsCsvContainer.style.display = 'none';
+  } else if (resultViewMode === 'json') {
+    if (resultsJsonPre && resultsJsonContainer) {
+      resultsJsonPre.textContent = JSON.stringify(data.rows, null, 2);
+      resultsJsonContainer.style.display = 'block';
+    }
+    if (resultsTableContainer) resultsTableContainer.style.display = 'none';
+    if (resultsCsvContainer) resultsCsvContainer.style.display = 'none';
+  } else if (resultViewMode === 'csv') {
+    if (resultsCsvPre && resultsCsvContainer) {
+      resultsCsvPre.textContent = toCsv(data.columns, data.rows);
+      resultsCsvContainer.style.display = 'block';
+    }
+    if (resultsTableContainer) resultsTableContainer.style.display = 'none';
+    if (resultsJsonContainer) resultsJsonContainer.style.display = 'none';
+  }
 }
 
 // Clear results
 function clearResults() {
   resultsTableHead.innerHTML = '';
   resultsTableBody.innerHTML = '';
+  if (resultsJsonPre) resultsJsonPre.textContent = '';
+  if (resultsCsvPre) resultsCsvPre.textContent = '';
+  if (resultsTableContainer) resultsTableContainer.style.display = 'none';
+  if (resultsJsonContainer) resultsJsonContainer.style.display = 'none';
+  if (resultsCsvContainer) resultsCsvContainer.style.display = 'none';
   resultsSection.style.display = 'none';
+  lastQueryResult = null;
 }
 
 function renderSchemaTree(schemas: SchemaInfo[]) {
@@ -482,4 +534,31 @@ function toggleTheme() {
   const currentTheme = htmlElement.getAttribute('data-theme');
   const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
   setTheme(newTheme as 'light' | 'dark');
+}
+
+function setResultViewMode(mode: 'table' | 'json' | 'csv') {
+  resultViewMode = mode;
+  localStorage.setItem('resultViewMode', mode);
+  // Update segmented button active states
+  if (viewTableBtn) viewTableBtn.classList.toggle('active', mode === 'table');
+  if (viewJsonBtn) viewJsonBtn.classList.toggle('active', mode === 'json');
+  if (viewCsvBtn) viewCsvBtn.classList.toggle('active', mode === 'csv');
+
+  // Re-render if we have data
+  if (lastQueryResult) {
+    displayResults(lastQueryResult);
+  }
+}
+
+function toCsv(columns: string[], rows: any[]): string {
+  const escape = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    const str = String(value);
+    const needsQuotes = /[",\n\r]/.test(str);
+    const escaped = str.replace(/"/g, '""');
+    return needsQuotes ? '"' + escaped + '"' : escaped;
+  };
+  const header = columns.map(escape).join(',');
+  const body = rows.map(row => columns.map(col => escape(row[col])).join(',')).join('\n');
+  return body ? header + '\n' + body : header + '\n';
 }
