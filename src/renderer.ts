@@ -85,22 +85,9 @@ if (toggleSchemaBtn) {
 
     const hasSchema = queryLayout.classList.contains('has-schema');
     if (!hasSchema) {
-      queryLayout.classList.add('has-schema');
-      schemaPanel.style.display = 'block';
-      schemaTree.innerHTML = '<p class="empty-state">Loading schemas…</p>';
-      try {
-        const result = await window.electronAPI.getSchemaTree(currentConnection);
-        if (result.success && result.data) {
-          renderSchemaTree(result.data);
-        } else {
-          schemaTree.innerHTML = `<p class="empty-state">Failed to load: ${result.error || 'Unknown error'}</p>`;
-        }
-      } catch (err) {
-        schemaTree.innerHTML = `<p class="empty-state">Error: ${String(err)}</p>`;
-      }
+      await openSchemaPanel();
     } else {
-      queryLayout.classList.remove('has-schema');
-      schemaPanel.style.display = 'none';
+      closeSchemaPanel();
     }
   });
 }
@@ -148,6 +135,15 @@ async function loadSavedConnections() {
         return;
       }
       loadConnectionToForm(conn);
+    });
+
+    // Auto-connect on double click
+    card.addEventListener('dblclick', async (e) => {
+      if ((e.target as HTMLElement).classList.contains('delete-btn')) {
+        return;
+      }
+      loadConnectionToForm(conn);
+      await connectToDatabase(conn);
     });
 
     // Delete button
@@ -247,9 +243,13 @@ saveBtn.addEventListener('click', async () => {
 connectionForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const config = getConnectionFromForm();
+  await connectToDatabase(config);
+});
 
+async function connectToDatabase(config: ConnectionConfig) {
   const submitBtn = connectionForm.querySelector('button[type="submit"]') as HTMLButtonElement;
   submitBtn.disabled = true;
+  const originalLabel = submitBtn.textContent;
   submitBtn.textContent = 'Connecting...';
 
   try {
@@ -259,6 +259,9 @@ connectionForm.addEventListener('submit', async (e) => {
       connectionPanel.style.display = 'none';
       queryPanel.style.display = 'block';
       connectedDbName.textContent = `Connected to: ${config.name} (${config.type.toUpperCase()})`;
+
+      // Show schemas by default
+      await openSchemaPanel();
     } else {
       showStatus(connectionStatus, `Connection failed: ${result.error}`, true);
     }
@@ -266,9 +269,9 @@ connectionForm.addEventListener('submit', async (e) => {
     showStatus(connectionStatus, `Error: ${error}`, true);
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Connect';
+    submitBtn.textContent = originalLabel || 'Connect';
   }
-});
+}
 
 // Disconnect
 disconnectBtn.addEventListener('click', () => {
@@ -276,14 +279,38 @@ disconnectBtn.addEventListener('click', () => {
   queryPanel.style.display = 'none';
   connectionPanel.style.display = 'block';
   clearResults();
+  closeSchemaPanel(true);
+});
+
+async function openSchemaPanel() {
+  if (!currentConnection) return;
+  if (!schemaPanel || !schemaTree || !queryLayout) return;
+
+  queryLayout.classList.add('has-schema');
+  schemaPanel.style.display = 'block';
+  schemaTree.innerHTML = '<p class="empty-state">Loading schemas…</p>';
+
+  try {
+    const result = await window.electronAPI.getSchemaTree(currentConnection);
+    if (result.success && result.data) {
+      renderSchemaTree(result.data);
+    } else {
+      schemaTree.innerHTML = `<p class="empty-state">Failed to load: ${result.error || 'Unknown error'}</p>`;
+    }
+  } catch (err) {
+    schemaTree.innerHTML = `<p class="empty-state">Error: ${String(err)}</p>`;
+  }
+}
+
+function closeSchemaPanel(clearTree: boolean = false) {
   if (schemaPanel) {
     schemaPanel.style.display = 'none';
-    if (schemaTree) schemaTree.innerHTML = '';
+    if (clearTree && schemaTree) schemaTree.innerHTML = '';
   }
   if (queryLayout) {
     queryLayout.classList.remove('has-schema');
   }
-});
+}
 
 // Execute query
 executeBtn.addEventListener('click', async () => {
@@ -422,6 +449,11 @@ function renderSchemaTree(schemas: SchemaInfo[]) {
       tableDetails.open = false;
       const tableSummary = document.createElement('summary');
       tableSummary.textContent = table.name;
+      tableSummary.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        insertTableSelectIntoQuery(schema.name, table.name);
+      });
       tableDetails.appendChild(tableSummary);
 
       const colsList = document.createElement('ul');
@@ -439,6 +471,46 @@ function renderSchemaTree(schemas: SchemaInfo[]) {
   });
   schemaTree.innerHTML = '';
   schemaTree.appendChild(container);
+}
+
+function insertTableSelectIntoQuery(schemaName: string, tableName: string) {
+  const qualifiedName = qualifyTableName(schemaName, tableName);
+  const snippet = `SELECT *\nFROM ${qualifiedName};\n`;
+  insertIntoQuery(snippet);
+}
+
+function qualifyTableName(schemaName: string, tableName: string): string {
+  const dbType = currentConnection?.type;
+  if (dbType === 'mssql') {
+    const q = (part: string) => `[${part.replace(/\]/g, ']]')}]`;
+    return schemaName ? `${q(schemaName)}.${q(tableName)}` : q(tableName);
+  }
+
+  // Default to PostgreSQL-style identifier quoting
+  const q = (part: string) => `"${part.replace(/"/g, '""')}"`;
+  return schemaName ? `${q(schemaName)}.${q(tableName)}` : q(tableName);
+}
+
+function insertIntoQuery(text: string) {
+  if (!queryInput) return;
+
+  const start = queryInput.selectionStart ?? queryInput.value.length;
+  const end = queryInput.selectionEnd ?? queryInput.value.length;
+
+  const before = queryInput.value.slice(0, start);
+  const after = queryInput.value.slice(end);
+
+  const needsLeadingNewline = before.length > 0 && !before.endsWith('\n');
+  const insertion = (needsLeadingNewline ? '\n' : '') + text;
+
+  queryInput.value = before + insertion + after;
+
+  const newCursorPos = (before + insertion).length;
+  queryInput.focus();
+  queryInput.setSelectionRange(newCursorPos, newCursorPos);
+
+  updateQueryHighlight();
+  syncScrollPosition();
 }
 
 function updateQueryHighlight() {
@@ -521,18 +593,14 @@ function initializeTheme() {
 
 function setTheme(theme: 'light' | 'dark') {
   const htmlElement = document.documentElement;
-  if (theme === 'dark') {
-    htmlElement.setAttribute('data-theme', 'dark');
-  } else {
-    htmlElement.removeAttribute('data-theme');
-  }
+  htmlElement.setAttribute('data-theme', theme);
   localStorage.setItem('theme', theme);
 }
 
 function toggleTheme() {
   const htmlElement = document.documentElement;
-  const currentTheme = htmlElement.getAttribute('data-theme');
-  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  const currentTheme = (htmlElement.getAttribute('data-theme') || 'dark') as 'light' | 'dark';
+  const newTheme: 'light' | 'dark' = currentTheme === 'dark' ? 'light' : 'dark';
   setTheme(newTheme as 'light' | 'dark');
 }
 
